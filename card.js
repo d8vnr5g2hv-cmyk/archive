@@ -113,47 +113,19 @@ const ACard = (() => {
   const owned = () => DB.all('owned');
   async function give(cid, kira) { const rec = { id:'o' + newId(), cid, kira:!!kira, at:Date.now() }; await DB.put('owned', rec); return rec; }
 
-  // ===== 最初から筐体に入っているカード（Supportの絵を使う。あとで自由に直せる・消せる） =====
-  const U = (f, ar = 2 / 3) => ({ kind:'url', poster:A(f), ar, x:0, y:0, s:1, baked:ar === 2 / 3 });
-  const L = (n) => ({ kind:'lobby', src:A(`${n}_tall_h264.mp4`), poster:A(`${n}_tall_poster.jpg`), ar:1170 / 2534, x:0, y:0, s:1 });
-  const SEED = [
-    ['hoshino', 1, '昼寝のあと',       U('bt_c_hoshino_atk.webp'), [{ k:'dmg', v:12, n:1 }]],
-    ['hoshino', 2, '盾を構えて',       U('bt_c_hoshino_bar.webp'), [{ k:'guard', v:12 }, { k:'dmg', v:8, n:1 }]],
-    ['hoshino', 3, 'おじさんの本気',   U('bt_c_hoshino_ex.webp'), [{ k:'dmg', v:13, n:2 }]],
-    ['hoshino', 4, '水族館の約束',     L('09_aquarium'), [{ k:'dmg', v:16, n:2 }, { k:'guard', v:6 }], 'full'],
-    ['mika',    1, 'お姫様のおねだり', U('bt_c_mika_atk.webp'), [{ k:'dmg', v:12, n:1 }]],
-    ['mika',    2, 'ちょっと本気',     U('bt_c_mika_bar.webp'), [{ k:'drain', v:12 }]],
-    ['mika',    3, '星を落とす',       U('bt_c_mika_ex.webp'), [{ k:'dmg', v:26, n:1 }]],
-    ['mika',    5, '夜のミカ',         L('16_mika_night'), [{ k:'dmg', v:20, n:2 }, { k:'atkup', v:25, t:2 }], 'full'],
-    ['hina',    1, '風紀委員長',       U('bt_c_hina_atk.webp'), [{ k:'dmg', v:12, n:1 }]],
-    ['hina',    2, '残業の夜',         U('bt_c_hina_bar.webp'), [{ k:'dmg', v:6, n:3 }]],
-    ['hina',    4, '一斉掃射',         U('bt_c_hina_exa_evo.webp'), [{ k:'dmg', v:12, n:3 }]],
-    ['miyako',  1, 'ウサギ小隊',       U('bt_c_miyako_atk.webp'), [{ k:'dmg', v:12, n:1 }]],
-    ['miyako',  2, '作戦開始',         U('bt_c_miyako_spd.webp'), [{ k:'weak', v:30, t:2 }, { k:'dmg', v:8, n:1 }]],
-    ['miyako',  3, '狙撃ポイント',     U('bt_c_miyako_ex.webp'), [{ k:'dmg', v:24, n:1 }, { k:'poison', v:2, t:1 }]],
-    ['mari',    1, 'シスターのお祈り', U('bt_c_mari_heal.webp'), [{ k:'heal', v:11 }]],
-    ['mari',    2, '応援しています',   U('bt_c_mari_buf.webp'), [{ k:'atkup', v:30, t:2 }, { k:'heal', v:6 }]],
-    ['mari',    4, '祝福の光',         U('bt_c_mari_heal_evo.webp'), [{ k:'heal', v:18 }, { k:'atkup', v:40, t:2 }]],
-    ['yuuka',   1, '計算どおり',       U('bt_c_yuuka_atk.webp'), [{ k:'dmg', v:12, n:1 }]],
-    ['yuuka',   2, '予算は守って',     U('bt_c_yuuka_bar.webp'), [{ k:'guard', v:20 }]],
-    ['yuuka',   4, 'セミナーの会計',   U('bt_c_yuuka_exa_evo.webp'), [{ k:'dmg', v:15, n:2 }, { k:'weak', v:20, t:2 }]],
-    ['kisaki',  1, '店番の午後',       U('bt_c_kisaki_atk.webp'), [{ k:'dmg', v:12, n:1 }]],
-    ['kisaki',  3, '玄龍門の門主',     U('bt_c_kisaki_ex.webp'), [{ k:'dmg', v:18, n:1 }, { k:'weak', v:25, t:2 }]],
-    ['noa',     2, 'おやすみの電話',   U('nc_noa_n.webp'), [{ k:'heal', v:10 }, { k:'guard', v:8 }]],
-    ['noa',     3, 'ちょっとだけ嫉妬', U('nc_noa_s.webp'), [{ k:'poison', v:6, t:3 }, { k:'dmg', v:10, n:1 }]],
+  // ===== ベーシック（だれでも使える3枚。スキャンでいつでも選べる） =====
+  const U = f => ({ kind:'url', poster:A(f), ar:2 / 3, x:0, y:0, s:1 });
+  const BASIC = [
+    { id:'b_atk',  name:'踏み込み', who:'other', dname:'耀平', rar:1, layout:'normal', tcol:'w', fx:[{ k:'dmg', v:12, n:1 }], art:U('hl_g_atk.webp'), set:'BASIC', basic:true },
+    { id:'b_def',  name:'身構える', who:'other', dname:'耀平', rar:1, layout:'normal', tcol:'w', fx:[{ k:'guard', v:10 }, { k:'dmg', v:5, n:1 }], art:U('hl_g_def.webp'), set:'BASIC', basic:true },
+    { id:'b_heal', name:'深呼吸',   who:'other', dname:'耀平', rar:1, layout:'normal', tcol:'w', fx:[{ k:'heal', v:12 }], art:U('hl_g_heal.webp'), set:'BASIC', basic:true },
   ];
+  // 初めて開いたとき：300円だけ（筐体の中身は自分で作る）
   async function seed() {
     if (LS.get('seeded')) return;
-    const now = Date.now();
-    const recs = SEED.map(([who, rar, name, art, fx, layout], i) => ({ id:'s' + i, name, who, dname:'', rar, frame:'auto', layout:layout || (art.kind === 'lobby' ? 'full' : 'normal'), veil:2, tcol:'w', fx, art, set:'第1弾', cab:true, at:now + i }));
-    for (const r of recs) await DB.put('cards', r);
-    // スターター：ノーマル3枚と300円
-    const starters = shuffle(recs.filter(r => r.rar === 1)).slice(0, 3);
-    for (const s of starters) await give(s.id, false);
-    Wallet.add(300);
-    LS.set('seeded', 1);
+    Wallet.add(300); LS.set('seeded', 1);
   }
 
   return { RAR, FRAME, TCOL, TYPE, FX, KEYS, fxDefault, fxLine, fxText, typeOf, power, BUDGET, blobUrl, poster, videoSrc, isLive, boxStyle, whoName,
-    html, back, shadow, tilt, all, owned, give, seed };
+    html, back, shadow, tilt, all, owned, give, seed, BASIC };
 })();

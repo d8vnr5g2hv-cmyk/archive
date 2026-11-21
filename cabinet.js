@@ -50,7 +50,8 @@ const Cabinet = (() => {
       <div class="cb-nav"><img src="${A('o_kisaki_talk.webp')}" alt=""><div class="talk pop" id="cbTalk"><b>KISAKI</b><span>${esc(Kisaki.line(Wallet.yen < 100 ? 'poor' : 'idle'))}</span></div></div>
       <div class="cb-mc">
         <div class="cb-mq"><i class="cb-bulbs"></i><b>ARCHIVE CARD</b><small>KISAKI'S ARCADE</small><i class="cb-bulbs b"></i></div>
-        <div class="cb-scr" id="cbScr"><div class="cb-att" id="cbAtt"></div><p class="cb-ins">INSERT COIN<small>100円で1プレイ・必ず1枚もらえる</small></p></div>
+        <div class="cb-scr" id="cbScr"><div class="cb-att" id="cbAtt"></div>${pool.length ? '<p class="cb-ins">INSERT COIN<small>100円で1プレイ・必ず1枚もらえる</small></p>'
+          : '<div class="cb-empty"><b>EMPTY</b><p>筐体の中にカードがありません。<br>カードを作って「筐体に入れる」をONにすると遊べます</p><button class="btn" id="cbMake">カードを作る</button></div>'}</div>
         <div class="cb-pn">
           <div class="cb-info"><small>LINE UP</small><b>${have}<span>/${pool.length}</span></b><em>手に入れた種類</em></div>
           <button class="cb-coin" id="cbCoin" ${pool.length ? '' : 'disabled'}><i class="cb-slot"></i><b>100</b><small>円を入れる</small></button>
@@ -61,8 +62,9 @@ const Cabinet = (() => {
     </div>`;
     attract(pool);
     $('cbCoin').addEventListener('click', insert);
+    if ($('cbMake')) $('cbMake').addEventListener('click', () => { Sfx.play('tap'); App.openMaker(); });
     box.querySelector('.cb-nav').addEventListener('click', () => talk(Kisaki.line(Wallet.yen < 100 ? 'poor' : 'idle')));
-    if (!pool.length) talk('筐体が空っぽだ。カードを作って「筐体に入れる」をONにするといい');
+    if (!pool.length) talk('筐体が空っぽだ。まずはカードを作って、中に入れてくるといい');
   }
   function talk(t) { const b = $('cbTalk'); if (!b) return; b.querySelector('span').textContent = t; b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
   // 画面に収録カードを順番に流す
@@ -100,7 +102,7 @@ const Play = (() => {
   let el = null;
   async function start() {
     const cards = await ACard.all(), owned = await ACard.owned();
-    let pool = cards.filter(c => c.cab); if (!pool.length) pool = cards;
+    const pool = cards.filter(c => c.cab); if (!pool.length) return;
     const me = el = h(`<div class="pl"><div class="pl-scan"></div><div class="pl-stage" id="plStage"></div>
       <div class="pl-kis" id="plKis"><img src="${A('o_kisaki_talk.webp')}" alt=""><div class="talk"><b>KISAKI</b><span></span></div></div></div>`);
     document.body.appendChild(el);
@@ -108,22 +110,22 @@ const Play = (() => {
     Bgm.play('battle');
     // ① スキャン
     const team = await scan(cards, owned);
-    // ② 抽選（レア度の重み→同じレア度の中は均等）。キラは完全ランダム
-    const foe = draw(pool), kira = Math.random() < .12;
-    await encounter(foe);
+    // ② 抽選（レア度の重み→同じレア度の中は均等）。キラは完全ランダム。敵の強さはレア度で決まる
+    const card = draw(pool), kira = Math.random() < .12, enemy = Battle.pickFoe(card.rar || 1);
+    await encounter(enemy);
     // ③ バトル
-    const res = await Battle.run($('plStage'), team, foe);
+    const res = await Battle.run($('plStage'), team, enemy);
     // ④ ゲット
-    await getAnim(foe);
-    const isNew = !owned.some(o => o.cid === foe.id);
-    await ACard.give(foe.id, kira);
-    if (isNew) LS.set('newCids', [...new Set([...LS.get('newCids', []), foe.id])]);
+    await getAnim();
+    const isNew = !owned.some(o => o.cid === card.id);
+    await ACard.give(card.id, kira);
+    if (isNew) LS.set('newCids', [...new Set([...LS.get('newCids', []), card.id])]);
     const bonus = { S:30, A:20, B:10, C:0 }[res.rank];
     // ⑤ 排出
     el.classList.add('dim');
-    await Reveal.show(foe, { kira, isNew });
+    await Reveal.show(card, { kira, isNew });
     if (bonus) { Wallet.add(bonus); Sfx.play('pay'); }
-    await result(foe, kira, isNew, res, bonus);
+    await result(card, kira, isNew, res, bonus);
     el.classList.remove('on'); Bgm.play('cab');
     await sleep(320); me.remove(); if (el === me) el = null;
   }
@@ -145,17 +147,18 @@ const Play = (() => {
     return new Promise(done => {
       const best = {};   // 同じカードは1つにまとめる（キラがあればキラ）
       owned.forEach(o => { const c = cards.find(x => x.id === o.cid); if (!c) return; if (!best[c.id] || o.kira) best[c.id] = { card:c, kira:o.kira }; });
-      const list = Object.values(best).sort((a, b) => ACard.power(b.card).r * b.card.rar - ACard.power(a.card).r * a.card.rar);
+      const list = Object.values(best).sort((a, b) => ACard.power(b.card).r * b.card.rar - ACard.power(a.card).r * a.card.rar)
+        .concat(ACard.BASIC.map(card => ({ card, kira:false })));
       const sel = [];
       $('plStage').innerHTML = `<div class="sc"><div class="sc-hd"><small>SCAN YOUR CARDS</small><b>相棒をスキャン</b><span>最大3枚。バトルで1ターンに1枚ずつ使います</span></div>
         <div class="sc-slots" id="scSlots">${[0, 1, 2].map(i => `<i data-s="${i}"></i>`).join('')}</div>
-        <div class="sc-grid" id="scGrid">${list.map((o, i) => `<button class="sc-c" data-i="${i}">${ACard.html(o.card, { still:true, kira:o.kira })}</button>`).join('') || '<p class="mu">まだカードがありません。素手で挑みます</p>'}</div>
+        <div class="sc-grid" id="scGrid">${list.map((o, i) => `<button class="sc-c" data-i="${i}">${ACard.html(o.card, { still:true, kira:o.kira })}</button>`).join('') || ''}</div>
         <div class="sc-act"><button class="btn sub" data-a="auto">おまかせ</button><button class="btn" data-a="go" id="scGo" disabled>スキャン！</button></div></div>`;
       kisaki(Kisaki.line('coin'));
       const paint = () => {
         $('plStage').querySelectorAll('.sc-c').forEach(b => { const k = sel.indexOf(+b.dataset.i); b.classList.toggle('on', k >= 0); b.dataset.n = k >= 0 ? k + 1 : ''; });
         $('scSlots').innerHTML = [0, 1, 2].map(i => sel[i] != null ? `<i class="on">${ACard.html(list[sel[i]].card, { still:true, kira:list[sel[i]].kira })}</i>` : '<i></i>').join('');
-        $('scGo').disabled = !!list.length && !sel.length;
+        $('scGo').disabled = !sel.length;
       };
       $('plStage').firstElementChild.addEventListener('click', async e => {
         const b = e.target.closest('button'); if (!b) return;
@@ -169,16 +172,16 @@ const Play = (() => {
           kisaki('', false);
           const sc = $('plStage').querySelector('.sc'); sc.classList.add('scanning'); Sfx.play('scan'); haptic(20);
           await sleep(1100);
-          done(list.length ? sel.map(i => list[i]) : [{ card:{ id:'basic', name:'体当たり', who:'other', rar:1, fx:[{ k:'dmg', v:10, n:1 }], art:null, set:'BASIC' }, kira:false }]);
+          done(sel.map(i => list[i]));
         }
       });
       paint();
     });
   }
 
-  // ----- ② 出現：レア度の前ぶれ → カットイン → 登場 -----
+  // ----- ② 出現：レア度の前ぶれ → カットイン → 敵が登場 -----
   async function encounter(foe) {
-    const r = foe.rar || 1, st = $('plStage');
+    const r = foe.r, st = $('plStage');
     st.innerHTML = `<div class="en r${r}"><i class="en-pillar"></i><i class="en-pillar b"></i><i class="en-pillar c"></i><div class="en-msg">${['', 'なにかが来る……', '青い光……！', '金色の光！', '虹色の光！？', '……？'][r]}</div></div>`;
     Sfx.play('charge'); haptic(10);
     await sleep(r >= 4 ? 1700 : 1300);
@@ -189,14 +192,15 @@ const Play = (() => {
     }
     st.firstElementChild.classList.add('flash'); Sfx.play('flash');
     await sleep(380);
-    st.innerHTML = `<div class="ap r${r}"><div class="ap-art">${Battle.media(foe)}</div><i class="ap-aura"></i>
-      <div class="ap-txt"><em style="color:${ACard.RAR[r].c}">${ACard.RAR[r].k}</em><b>${esc(ACard.whoName(foe))}</b><span>が あらわれた！</span><small>${esc(foe.name)}</small></div></div>`;
+    st.innerHTML = `<div class="ap r${r}"><i class="ap-aura"></i><div class="ap-art">${Battle.foeHTML(foe)}</div>
+      <div class="ap-txt">${foe.boss ? '<em style="color:#b9a4ff">BOSS</em>' : ''}<b>${Battle.attrTag(foe)}${esc(foe.n)}</b><span>が あらわれた！</span><small>倒してGETゲージをためよう</small></div></div>`;
+    Sfx.play(foe.boss ? 'big' : 'hit');
     await sleep(2100);
   }
 
   // ----- ④ ゲット -----
-  async function getAnim(foe) {
-    const g = h(`<div class="gt"><i class="gt-ring"></i><b>GET!</b><small>${esc(ACard.whoName(foe))}のカード</small></div>`);
+  async function getAnim() {
+    const g = h(`<div class="gt"><i class="gt-ring"></i><b>GET!</b><small>カードが出てくるぞ……</small></div>`);
     $('plStage').appendChild(g); Sfx.play('get'); haptic(30);
     await sleep(1500);
   }
