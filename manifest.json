@@ -1,0 +1,13 @@
+{
+  "name": "アーカイブカード",
+  "short_name": "アーカイブカード",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1030",
+  "theme_color": "#0b1030",
+  "icons": [
+    { "src": "../kanifavofa-y/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "../kanifavofa-y/icon-180.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

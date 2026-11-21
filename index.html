@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b1030">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="アーカイブカード">
+<title>アーカイブカード</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="../kanifavofa-y/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Barlow:ital,wght@0,500;0,600;1,600;1,700;1,800&family=Barlow+Condensed:ital,wght@1,700;1,800&display=block" rel="stylesheet">
+<link rel="stylesheet" href="card.css">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="cabinet.css">
+<link rel="stylesheet" href="maker.css">
+<link rel="stylesheet" href="job.css">
+</head>
+<body>
+
+<!-- タイトル -->
+<div id="title">
+  <img class="tt-bg" src="../kanifavofa-y/title_kisaki_1.jpg" alt="">
+  <div class="tt-shade"></div>
+  <div class="tt-logo"><small>KISAKI'S ARCADE</small><b>ARCHIVE<br>CARD</b><span>アーカイブカード</span></div>
+  <p class="tt-tap">TAP TO START</p>
+</div>
+
+<div id="app">
+  <header id="hd">
+    <div class="hd-logo"><small>ARCHIVE</small><b>CARD</b></div>
+    <div class="hd-yen"><i>¥</i><b id="hdYen">0</b></div>
+    <button class="hd-bgm" id="hdBgm" aria-label="BGM">♪</button>
+  </header>
+
+  <main id="pages">
+    <section class="page" id="pg-cab"></section>
+    <section class="page" id="pg-make">
+      <div class="seg" id="mkSeg"><button data-seg="binder" class="on">バインダー</button><button data-seg="make">カードを作る</button></div>
+      <div id="mkBody"></div>
+    </section>
+    <section class="page" id="pg-job"></section>
+  </main>
+
+  <nav id="tabs">
+    <button data-tab="cab" class="on"><i class="ti-cab"></i><span>筐体</span><small>ARCADE</small></button>
+    <button data-tab="make"><i class="ti-make"></i><span>カード</span><small>CARDS</small></button>
+    <button data-tab="job"><i class="ti-job"></i><span>アルバイト</span><small>PART-TIME</small></button>
+  </nav>
+</div>
+
+<script src="core.js"></script>
+<script src="card.js"></script>
+<script src="maker.js"></script>
+<script src="binder.js"></script>
+<script src="battle.js"></script>
+<script src="cabinet.js"></script>
+<script src="job.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
