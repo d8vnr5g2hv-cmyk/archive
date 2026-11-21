@@ -122,6 +122,14 @@ const ACard = (() => {
   ];
   // 初めて開いたとき：300円だけ（筐体の中身は自分で作る）
   async function seed() {
+    // 前の版で最初から入れていたカード（id が s0〜s23）と、そのスターター分を一度だけ消す
+    if (!LS.get('cleanV2')) {
+      const old = (await all()).filter(c => /^s\d+$/.test(c.id)), ids = new Set(old.map(c => c.id));
+      for (const c of old) await DB.del('cards', c.id);
+      for (const o of await owned()) if (ids.has(o.cid)) await DB.del('owned', o.id);
+      LS.set('newCids', LS.get('newCids', []).filter(id => !ids.has(id)));
+      LS.set('cleanV2', 1);
+    }
     if (LS.get('seeded')) return;
     Wallet.add(300); LS.set('seeded', 1);
   }
